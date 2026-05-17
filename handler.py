@@ -3,8 +3,9 @@ import base64
 import os
 import uuid
 import subprocess
-import boto3
 from pathlib import Path
+from gtts import gTTS
+import boto3
 
 # ── Cloudflare R2 setup ──────────────────────────────────────────
 s3 = boto3.client(
@@ -17,16 +18,16 @@ BUCKET = os.environ["R2_BUCKET_NAME"]
 
 def upload_to_r2(file_path: str, key: str) -> str:
     s3.upload_file(file_path, BUCKET, key, ExtraArgs={"ContentType": "video/mp4"})
-    return f"https://{os.environ['R2_PUBLIC_URL']}/{key}"
+    return f"{os.environ['R2_PUBLIC_URL']}/{key}"
 
 # ── Main handler ─────────────────────────────────────────────────
 def handler(job):
     job_input = job["input"]
-    
-    script     = job_input.get("script", "")
-    photo_b64  = job_input.get("photo_base64", "")
-    voice_id   = job_input.get("voice_id", "en-us-female")
-    job_id     = job_input.get("job_id", str(uuid.uuid4()))
+
+    script    = job_input.get("script", "")
+    photo_b64 = job_input.get("photo_base64", "")
+    voice_id  = job_input.get("voice_id", "en-us-female")
+    job_id    = job_input.get("job_id", str(uuid.uuid4()))
 
     work_dir = f"/tmp/{job_id}"
     os.makedirs(work_dir, exist_ok=True)
@@ -38,22 +39,23 @@ def handler(job):
             f.write(base64.b64decode(photo_b64))
         print(f"✅ Photo saved: {photo_path}")
 
-        # ── Step 2: Generate audio with Coqui TTS ───────────────
-        audio_path = f"{work_dir}/audio.wav"
+        # ── Step 2: Generate audio with gTTS ────────────────────
+        audio_path = f"{work_dir}/audio.mp3"
+
         lang = "en"
         if "es" in voice_id:   lang = "es"
         elif "fr" in voice_id: lang = "fr"
         elif "de" in voice_id: lang = "de"
         elif "hi" in voice_id: lang = "hi"
+        elif "pt" in voice_id: lang = "pt"
+        elif "it" in voice_id: lang = "it"
+        elif "ja" in voice_id: lang = "ja"
+        elif "ko" in voice_id: lang = "ko"
+        elif "zh" in voice_id: lang = "zh"
+        elif "ar" in voice_id: lang = "ar"
 
-        tts_cmd = [
-            "tts",
-            "--text", script,
-            "--model_name", "tts_models/multilingual/multi-dataset/xtts_v2",
-            "--language_idx", lang,
-            "--out_path", audio_path,
-        ]
-        subprocess.run(tts_cmd, check=True)
+        tts = gTTS(text=script, lang=lang, slow=False)
+        tts.save(audio_path)
         print(f"✅ Audio generated: {audio_path}")
 
         # ── Step 3: Generate video with SadTalker ────────────────
@@ -67,7 +69,6 @@ def handler(job):
             "--result_dir", output_dir,
             "--still",
             "--preprocess", "full",
-            "--enhancer", "gfpgan",
         ]
         subprocess.run(sadtalker_cmd, check=True, cwd="/SadTalker")
         print(f"✅ Video generated")
@@ -97,8 +98,7 @@ def handler(job):
             "job_id": job_id,
         }
     finally:
-        # Cleanup temp files
         import shutil
         shutil.rmtree(work_dir, ignore_errors=True)
 
-runpod.serverless.start({"handler": handler}) 
+runpod.serverless.start({"handler": handler})

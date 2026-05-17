@@ -1,4 +1,4 @@
-FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
+FROM python:3.10-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -8,31 +8,40 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libgl1-mesa-glx \
     wget \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python packages with timeout increase
-RUN pip install --no-cache-dir --timeout=300 \
+# Install lightweight packages first
+RUN pip install --no-cache-dir \
     runpod \
     boto3 \
+    gTTS \
     opencv-python-headless \
     imageio \
     imageio-ffmpeg \
     scipy \
-    face-alignment
+    requests
 
-# Install TTS separately with longer timeout
-RUN pip install --no-cache-dir --timeout=600 TTS
+# Install torch separately
+RUN pip install --no-cache-dir \
+    torch==2.1.0 \
+    torchvision==0.16.0 \
+    torchaudio==2.1.0 \
+    --index-url https://download.pytorch.org/whl/cpu
 
-# Install SadTalker
+# Install SadTalker dependencies
+RUN pip install --no-cache-dir \
+    face-alignment==1.3.5 \
+    facexlib \
+    realesrgan
+
+# Clone SadTalker
 RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
 WORKDIR /SadTalker
-RUN pip install --no-cache-dir --timeout=300 -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Download SadTalker checkpoints
 RUN bash scripts/download_models.sh
-
-# Pre-download XTTS model
-RUN python -c "from TTS.api import TTS; TTS('tts_models/multilingual/multi-dataset/xtts_v2')"
 
 # Copy handler
 COPY handler.py /handler.py
