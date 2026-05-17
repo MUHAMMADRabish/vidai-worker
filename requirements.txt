@@ -1,0 +1,11 @@
+runpod
+boto3
+TTS
+torch
+torchvision
+torchaudio
+opencv-python-headless
+imageio
+imageio-ffmpeg
+face-alignment
+scipy 
