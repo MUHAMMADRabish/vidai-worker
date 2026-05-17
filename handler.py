@@ -7,6 +7,8 @@ from pathlib import Path
 from gtts import gTTS
 import boto3
 from botocore.config import Config
+from PIL import Image
+import io
 
 # ── Cloudflare R2 setup ──────────────────────────────────────────
 s3 = boto3.client(
@@ -47,22 +49,30 @@ def handler(job):
 
     try:
         # ── Step 1: Save photo ───────────────────────────────────
-        photo_path = f"{work_dir}/photo.jpg"
+        photo_path = f"{work_dir}/photo.png"
 
         # Strip data URL prefix if present
         if "," in photo_b64:
             photo_b64 = photo_b64.split(",")[1]
 
-        # Add padding if needed
+        # Fix base64 padding
+        photo_b64 = photo_b64.strip()
         padding = 4 - len(photo_b64) % 4
         if padding != 4:
             photo_b64 += "=" * padding
 
         photo_data = base64.b64decode(photo_b64)
-        with open(photo_path, "wb") as f:
-            f.write(photo_data)
 
-        print(f"✅ Photo saved: {photo_path} ({len(photo_data)} bytes)")
+        # Save using PIL to ensure valid image format
+        img = Image.open(io.BytesIO(photo_data))
+        img = img.convert("RGB")
+
+        # Resize if too large for SadTalker
+        if img.width > 512 or img.height > 512:
+            img.thumbnail((512, 512), Image.LANCZOS)
+
+        img.save(photo_path, "PNG")
+        print(f"✅ Photo saved: {photo_path} size: {img.size}")
 
         # ── Step 2: Generate audio with gTTS ────────────────────
         audio_path = f"{work_dir}/audio.mp3"
@@ -95,6 +105,7 @@ def handler(job):
             "--still",
             "--preprocess", "crop",
         ]
+
         result = subprocess.run(
             sadtalker_cmd,
             cwd="/SadTalker",
@@ -102,8 +113,8 @@ def handler(job):
             text=True
         )
 
-        print(f"SadTalker stdout: {result.stdout}")
-        print(f"SadTalker stderr: {result.stderr}")
+        print(f"SadTalker stdout: {result.stdout[-1000:]}")
+        print(f"SadTalker stderr: {result.stderr[-1000:]}")
 
         if result.returncode != 0:
             raise Exception(f"SadTalker failed: {result.stderr[-500:]}")
