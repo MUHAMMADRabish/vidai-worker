@@ -53,26 +53,16 @@ def handler(job):
         if "," in photo_b64:
             photo_b64 = photo_b64.split(",")[1]
 
+        # Add padding if needed
+        padding = 4 - len(photo_b64) % 4
+        if padding != 4:
+            photo_b64 += "=" * padding
+
         photo_data = base64.b64decode(photo_b64)
         with open(photo_path, "wb") as f:
             f.write(photo_data)
 
-        # Verify and resize photo for SadTalker
-        import cv2
-        img = cv2.imread(photo_path)
-        if img is None:
-            raise Exception("Photo could not be read - invalid image format")
-
-        # Resize to optimal size for SadTalker (max 512px)
-        height, width = img.shape[:2]
-        if width > 512 or height > 512:
-            scale = 512 / max(width, height)
-            new_width = int(width * scale)
-            new_height = int(height * scale)
-            img = cv2.resize(img, (new_width, new_height))
-            cv2.imwrite(photo_path, img)
-
-        print(f"✅ Photo saved: {photo_path} size: {img.shape}")
+        print(f"✅ Photo saved: {photo_path} ({len(photo_data)} bytes)")
 
         # ── Step 2: Generate audio with gTTS ────────────────────
         audio_path = f"{work_dir}/audio.mp3"
@@ -103,9 +93,21 @@ def handler(job):
             "--source_image", photo_path,
             "--result_dir", output_dir,
             "--still",
-            "--preprocess", "full",
+            "--preprocess", "crop",
         ]
-        subprocess.run(sadtalker_cmd, check=True, cwd="/SadTalker")
+        result = subprocess.run(
+            sadtalker_cmd,
+            cwd="/SadTalker",
+            capture_output=True,
+            text=True
+        )
+
+        print(f"SadTalker stdout: {result.stdout}")
+        print(f"SadTalker stderr: {result.stderr}")
+
+        if result.returncode != 0:
+            raise Exception(f"SadTalker failed: {result.stderr[-500:]}")
+
         print(f"✅ Video generated")
 
         # ── Step 4: Find output video ────────────────────────────
