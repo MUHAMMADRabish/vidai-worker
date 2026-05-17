@@ -10,26 +10,32 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python packages with timeout increase
+RUN pip install --no-cache-dir --timeout=300 \
+    runpod \
+    boto3 \
+    opencv-python-headless \
+    imageio \
+    imageio-ffmpeg \
+    scipy \
+    face-alignment
+
+# Install TTS separately with longer timeout
+RUN pip install --no-cache-dir --timeout=600 TTS
+
 # Install SadTalker
 RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
 WORKDIR /SadTalker
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir --timeout=300 -r requirements.txt
 
 # Download SadTalker checkpoints
 RUN bash scripts/download_models.sh
 
-# Install Coqui TTS
-RUN pip install TTS
-
 # Pre-download XTTS model
 RUN python -c "from TTS.api import TTS; TTS('tts_models/multilingual/multi-dataset/xtts_v2')"
-
-# Install worker dependencies
-COPY requirements.txt /requirements.txt
-RUN pip install -r /requirements.txt
 
 # Copy handler
 COPY handler.py /handler.py
 
 WORKDIR /
-CMD ["python", "-u", "handler.py"] 
+CMD ["python", "-u", "handler.py"]
