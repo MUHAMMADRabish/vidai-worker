@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 from gtts import gTTS
 import boto3
+from botocore.config import Config
 
 # ── Cloudflare R2 setup ──────────────────────────────────────────
 s3 = boto3.client(
@@ -14,15 +15,22 @@ s3 = boto3.client(
     aws_access_key_id=os.environ["R2_ACCESS_KEY"],
     aws_secret_access_key=os.environ["R2_SECRET_KEY"],
     region_name="auto",
+    config=Config(
+        signature_version="s3v4",
+        s3={"addressing_style": "path"}
+    )
 )
 BUCKET = os.environ["R2_BUCKET_NAME"]
 
 def upload_to_r2(file_path: str, key: str) -> str:
-    s3.upload_file(
-        file_path,
-        BUCKET,
-        key,
-        ExtraArgs={"ContentType": "video/mp4"}
+    with open(file_path, "rb") as f:
+        file_data = f.read()
+    
+    s3.put_object(
+        Bucket=BUCKET,
+        Key=key,
+        Body=file_data,
+        ContentType="video/mp4"
     )
     return f"{os.environ['R2_PUBLIC_URL']}/{key}"
 
