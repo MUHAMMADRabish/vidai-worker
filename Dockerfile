@@ -1,41 +1,21 @@
-FROM python:3.10-slim
+FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
+RUN apt-get update -y && apt-get install -y \
     ffmpeg \
     libsm6 \
     libxext6 \
     libgl1-mesa-glx \
-    wget \
-    curl \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install lightweight packages first
+# Install lightweight Python packages
 RUN pip install --no-cache-dir \
     runpod \
     boto3 \
-    gTTS \
-    opencv-python-headless \
-    imageio \
-    imageio-ffmpeg \
-    scipy \
-    requests
+    gTTS
 
-# Install torch separately
-RUN pip install --no-cache-dir \
-    torch==2.1.0 \
-    torchvision==0.16.0 \
-    torchaudio==2.1.0 \
-    --index-url https://download.pytorch.org/whl/cpu
-
-# Install SadTalker dependencies
-RUN pip install --no-cache-dir \
-    face-alignment==1.3.5 \
-    facexlib \
-    realesrgan
-
-# Clone SadTalker
+# Install SadTalker
 RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
 WORKDIR /SadTalker
 RUN pip install --no-cache-dir -r requirements.txt
