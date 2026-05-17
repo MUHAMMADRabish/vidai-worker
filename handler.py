@@ -25,7 +25,6 @@ BUCKET = os.environ["R2_BUCKET_NAME"]
 def upload_to_r2(file_path: str, key: str) -> str:
     with open(file_path, "rb") as f:
         file_data = f.read()
-    
     s3.put_object(
         Bucket=BUCKET,
         Key=key,
@@ -49,9 +48,31 @@ def handler(job):
     try:
         # ── Step 1: Save photo ───────────────────────────────────
         photo_path = f"{work_dir}/photo.jpg"
+
+        # Strip data URL prefix if present
+        if "," in photo_b64:
+            photo_b64 = photo_b64.split(",")[1]
+
+        photo_data = base64.b64decode(photo_b64)
         with open(photo_path, "wb") as f:
-            f.write(base64.b64decode(photo_b64))
-        print(f"✅ Photo saved: {photo_path}")
+            f.write(photo_data)
+
+        # Verify and resize photo for SadTalker
+        import cv2
+        img = cv2.imread(photo_path)
+        if img is None:
+            raise Exception("Photo could not be read - invalid image format")
+
+        # Resize to optimal size for SadTalker (max 512px)
+        height, width = img.shape[:2]
+        if width > 512 or height > 512:
+            scale = 512 / max(width, height)
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            img = cv2.resize(img, (new_width, new_height))
+            cv2.imwrite(photo_path, img)
+
+        print(f"✅ Photo saved: {photo_path} size: {img.shape}")
 
         # ── Step 2: Generate audio with gTTS ────────────────────
         audio_path = f"{work_dir}/audio.mp3"
