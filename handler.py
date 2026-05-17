@@ -103,7 +103,8 @@ def handler(job):
             "--source_image", photo_path,
             "--result_dir", output_dir,
             "--still",
-            "--preprocess", "crop",
+            "--preprocess", "full",
+            "--size", "256",
         ]
 
         result = subprocess.run(
