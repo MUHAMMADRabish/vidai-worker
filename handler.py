@@ -63,13 +63,14 @@ def handler(job):
 
         photo_data = base64.b64decode(photo_b64)
 
-        # Save using PIL to ensure valid image format
+        # Save using PIL
         img = Image.open(io.BytesIO(photo_data))
         img = img.convert("RGB")
 
-        # Resize if too large for SadTalker
-        if img.width > 512 or img.height > 512:
-            img.thumbnail((512, 512), Image.LANCZOS)
+        # Keep larger size for body visibility
+        # Only resize if extremely large
+        if img.width > 1024 or img.height > 1024:
+            img.thumbnail((1024, 1024), Image.LANCZOS)
 
         img.save(photo_path, "PNG")
         print(f"✅ Photo saved: {photo_path} size: {img.size}")
@@ -103,8 +104,8 @@ def handler(job):
             "--source_image", photo_path,
             "--result_dir", output_dir,
             "--still",
-            "--preprocess", "full",
-            "--size", "256",
+            "--preprocess", "extfull",
+            "--size", "512",
         ]
 
         result = subprocess.run(
