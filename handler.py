@@ -4,9 +4,12 @@ import os
 import uuid
 import subprocess
 import asyncio
+import nest_asyncio
 from pathlib import Path
 import edge_tts
 import boto3
+
+nest_asyncio.apply()
 from botocore.config import Config
 from PIL import Image
 import io

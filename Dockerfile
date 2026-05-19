@@ -13,7 +13,8 @@ RUN apt-get update -y && apt-get install -y \
 RUN pip install --no-cache-dir \
     runpod \
     boto3 \
-    edge-tts
+    edge-tts \
+    nest_asyncio
 
 # Install SadTalker
 RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
