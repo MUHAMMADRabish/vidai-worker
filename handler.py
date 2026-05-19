@@ -78,17 +78,37 @@ def handler(job):
         # ── Step 2: Generate audio with gTTS ────────────────────
         audio_path = f"{work_dir}/audio.mp3"
 
-        lang = "en"
-        if "es" in voice_id:   lang = "es"
-        elif "fr" in voice_id: lang = "fr"
-        elif "de" in voice_id: lang = "de"
-        elif "hi" in voice_id: lang = "hi"
-        elif "pt" in voice_id: lang = "pt"
-        elif "it" in voice_id: lang = "it"
-        elif "ja" in voice_id: lang = "ja"
-        elif "ko" in voice_id: lang = "ko"
-        elif "zh" in voice_id: lang = "zh"
-        elif "ar" in voice_id: lang = "ar"
+        voice_lang_map = {
+            "en-us-male":   "en",
+            "en-us-female": "en",
+            "en-gb-male":   "en-uk",
+            "en-gb-female": "en-uk",
+            "en-au-male":   "en-au",
+            "en-au-female": "en-au",
+            "en-in-male":   "en-in",
+            "en-in-female": "en-in",
+            "es-es-male":   "es",
+            "es-es-female": "es",
+            "es-mx-male":   "es-mx",
+            "es-mx-female": "es-mx",
+            "fr-fr-male":   "fr",
+            "fr-fr-female": "fr",
+            "de-de-male":   "de",
+            "de-de-female": "de",
+            "ar-male":      "ar",
+            "ar-female":    "ar",
+            "hi-male":      "hi",
+            "hi-female":    "hi",
+            "zh-male":      "zh-CN",
+            "zh-female":    "zh-CN",
+            "ja-male":      "ja",
+            "ja-female":    "ja",
+            "pt-br-male":   "pt-br",
+            "pt-br-female": "pt-br",
+            "it-male":      "it",
+            "it-female":    "it",
+        }
+        lang = voice_lang_map.get(voice_id, "en")
 
         tts = gTTS(text=script, lang=lang, slow=False)
         tts.save(audio_path)
