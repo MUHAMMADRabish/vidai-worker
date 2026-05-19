@@ -1,4 +1,4 @@
 runpod
 boto3
-gTTS
+edge-tts
 Pillow

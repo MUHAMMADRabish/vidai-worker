@@ -3,8 +3,9 @@ import base64
 import os
 import uuid
 import subprocess
+import asyncio
 from pathlib import Path
-from gtts import gTTS
+import edge_tts
 import boto3
 from botocore.config import Config
 from PIL import Image
@@ -75,43 +76,46 @@ def handler(job):
         img.save(photo_path, "PNG")
         print(f"✅ Photo saved: {photo_path} size: {img.size}")
 
-        # ── Step 2: Generate audio with gTTS ────────────────────
+        # ── Step 2: Generate audio with edge-tts ────────────────
         audio_path = f"{work_dir}/audio.mp3"
 
-        voice_lang_map = {
-            "en-us-male":   "en",
-            "en-us-female": "en",
-            "en-gb-male":   "en-uk",
-            "en-gb-female": "en-uk",
-            "en-au-male":   "en-au",
-            "en-au-female": "en-au",
-            "en-in-male":   "en-in",
-            "en-in-female": "en-in",
-            "es-es-male":   "es",
-            "es-es-female": "es",
-            "es-mx-male":   "es-mx",
-            "es-mx-female": "es-mx",
-            "fr-fr-male":   "fr",
-            "fr-fr-female": "fr",
-            "de-de-male":   "de",
-            "de-de-female": "de",
-            "ar-male":      "ar",
-            "ar-female":    "ar",
-            "hi-male":      "hi",
-            "hi-female":    "hi",
-            "zh-male":      "zh-CN",
-            "zh-female":    "zh-CN",
-            "ja-male":      "ja",
-            "ja-female":    "ja",
-            "pt-br-male":   "pt-br",
-            "pt-br-female": "pt-br",
-            "it-male":      "it",
-            "it-female":    "it",
+        voice_name_map = {
+            "en-us-male":   "en-US-GuyNeural",
+            "en-us-female": "en-US-JennyNeural",
+            "en-gb-male":   "en-GB-RyanNeural",
+            "en-gb-female": "en-GB-SoniaNeural",
+            "en-au-male":   "en-AU-WilliamNeural",
+            "en-au-female": "en-AU-NatashaNeural",
+            "en-in-male":   "en-IN-PrabhatNeural",
+            "en-in-female": "en-IN-NeerjaNeural",
+            "es-es-male":   "es-ES-AlvaroNeural",
+            "es-es-female": "es-ES-ElviraNeural",
+            "es-mx-male":   "es-MX-JorgeNeural",
+            "es-mx-female": "es-MX-DaliaNeural",
+            "fr-fr-male":   "fr-FR-HenriNeural",
+            "fr-fr-female": "fr-FR-DeniseNeural",
+            "de-de-male":   "de-DE-ConradNeural",
+            "de-de-female": "de-DE-KatjaNeural",
+            "ar-male":      "ar-SA-HamedNeural",
+            "ar-female":    "ar-SA-ZariyahNeural",
+            "hi-male":      "hi-IN-MadhurNeural",
+            "hi-female":    "hi-IN-SwaraNeural",
+            "zh-male":      "zh-CN-YunxiNeural",
+            "zh-female":    "zh-CN-XiaoxiaoNeural",
+            "ja-male":      "ja-JP-KeitaNeural",
+            "ja-female":    "ja-JP-NanamiNeural",
+            "pt-br-male":   "pt-BR-AntonioNeural",
+            "pt-br-female": "pt-BR-FranciscaNeural",
+            "it-male":      "it-IT-DiegoNeural",
+            "it-female":    "it-IT-ElsaNeural",
         }
-        lang = voice_lang_map.get(voice_id, "en")
+        voice_name = voice_name_map.get(voice_id, "en-US-JennyNeural")
 
-        tts = gTTS(text=script, lang=lang, slow=False)
-        tts.save(audio_path)
+        async def _synthesize():
+            communicate = edge_tts.Communicate(script, voice_name)
+            await communicate.save(audio_path)
+
+        asyncio.run(_synthesize())
         print(f"✅ Audio generated: {audio_path}")
 
         # ── Step 3: Generate video with SadTalker ────────────────
