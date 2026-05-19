@@ -3,13 +3,8 @@ import base64
 import os
 import uuid
 import subprocess
-import asyncio
-import nest_asyncio
 from pathlib import Path
-import edge_tts
 import boto3
-
-nest_asyncio.apply()
 from botocore.config import Config
 from PIL import Image
 import io
@@ -114,11 +109,13 @@ def handler(job):
         }
         voice_name = voice_name_map.get(voice_id, "en-US-JennyNeural")
 
-        async def _synthesize():
-            communicate = edge_tts.Communicate(script, voice_name)
-            await communicate.save(audio_path)
-
-        asyncio.run(_synthesize())
+        tts_result = subprocess.run(
+            ["edge-tts", "--voice", voice_name, "--text", script, "--write-media", audio_path],
+            capture_output=True,
+            text=True
+        )
+        if tts_result.returncode != 0:
+            raise Exception(f"edge-tts failed: {tts_result.stderr}")
         print(f"✅ Audio generated: {audio_path}")
 
         # ── Step 3: Generate video with SadTalker ────────────────
