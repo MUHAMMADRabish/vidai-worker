@@ -1,3 +1,10 @@
+try:
+    import torchvision.transforms.functional_tensor
+except ModuleNotFoundError:
+    import torchvision.transforms.functional as functional_tensor
+    import sys
+    sys.modules['torchvision.transforms.functional_tensor'] = functional_tensor
+
 import runpod
 import base64
 import os

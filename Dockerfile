@@ -11,6 +11,10 @@ RUN apt-get update -y && apt-get install -y \
 
 RUN pip install --no-cache-dir runpod boto3 nest_asyncio edge-tts Pillow
 
+# Fix basicsr/torchvision compatibility with PyTorch 2.4+
+RUN pip install --no-cache-dir "basicsr @ git+https://github.com/XPixelGroup/BasicSR.git"
+RUN pip install --no-cache-dir facexlib gfpgan
+
 # Install SadTalker
 RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
 WORKDIR /SadTalker
