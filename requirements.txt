@@ -1,5 +1,5 @@
 runpod
 boto3
 edge-tts
-TTS
+nest_asyncio
 Pillow

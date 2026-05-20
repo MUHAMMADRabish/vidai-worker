@@ -3,7 +3,6 @@ import base64
 import os
 import uuid
 import subprocess
-import urllib.request
 from pathlib import Path
 import boto3
 from botocore.config import Config
@@ -76,75 +75,53 @@ def handler(job):
         img.save(photo_path, "PNG")
         print(f"✅ Photo saved: {photo_path} size: {img.size}")
 
-        # ── Step 2: Generate audio ───────────────────────────────
+        # ── Step 2: Generate audio with edge-tts ────────────────
+        # TODO: Replace with ElevenLabs API for real voice cloning
         if voice_sample_url:
-            # XTTS v2 voice cloning
-            audio_path = f"{work_dir}/audio.wav"
-            voice_sample_path = f"{work_dir}/voice_sample.wav"
+            print(f"ℹ️ voice_sample_url provided but voice cloning not yet implemented — using edge-tts voice match")
 
-            urllib.request.urlretrieve(voice_sample_url, voice_sample_path)
-            print(f"✅ Voice sample downloaded: {voice_sample_path}")
+        audio_path = f"{work_dir}/audio.mp3"
 
-            xtts_lang_map = {
-                "en": "en", "es": "es", "fr": "fr", "de": "de",
-                "ar": "ar", "hi": "hi", "zh": "zh-cn", "ja": "ja",
-                "pt": "pt", "it": "it",
-            }
-            lang = xtts_lang_map.get(voice_id.split("-")[0], "en")
+        voice_name_map = {
+            "en-us-male":   "en-US-GuyNeural",
+            "en-us-female": "en-US-JennyNeural",
+            "en-gb-male":   "en-GB-RyanNeural",
+            "en-gb-female": "en-GB-SoniaNeural",
+            "en-au-male":   "en-AU-WilliamNeural",
+            "en-au-female": "en-AU-NatashaNeural",
+            "en-in-male":   "en-IN-PrabhatNeural",
+            "en-in-female": "en-IN-NeerjaNeural",
+            "es-es-male":   "es-ES-AlvaroNeural",
+            "es-es-female": "es-ES-ElviraNeural",
+            "es-mx-male":   "es-MX-JorgeNeural",
+            "es-mx-female": "es-MX-DaliaNeural",
+            "fr-fr-male":   "fr-FR-HenriNeural",
+            "fr-fr-female": "fr-FR-DeniseNeural",
+            "de-de-male":   "de-DE-ConradNeural",
+            "de-de-female": "de-DE-KatjaNeural",
+            "ar-male":      "ar-SA-HamedNeural",
+            "ar-female":    "ar-SA-ZariyahNeural",
+            "hi-male":      "hi-IN-MadhurNeural",
+            "hi-female":    "hi-IN-SwaraNeural",
+            "zh-male":      "zh-CN-YunxiNeural",
+            "zh-female":    "zh-CN-XiaoxiaoNeural",
+            "ja-male":      "ja-JP-KeitaNeural",
+            "ja-female":    "ja-JP-NanamiNeural",
+            "pt-br-male":   "pt-BR-AntonioNeural",
+            "pt-br-female": "pt-BR-FranciscaNeural",
+            "it-male":      "it-IT-DiegoNeural",
+            "it-female":    "it-IT-ElsaNeural",
+        }
+        voice_name = voice_name_map.get(voice_id, "en-US-JennyNeural")
 
-            from TTS.api import TTS as CoquiTTS
-            tts_model = CoquiTTS("tts_models/multilingual/multi-dataset/xtts_v2")
-            tts_model.tts_to_file(
-                text=script,
-                speaker_wav=voice_sample_path,
-                language=lang,
-                file_path=audio_path
-            )
-            print(f"✅ Audio generated with XTTS v2: {audio_path}")
-        else:
-            # edge-tts fallback
-            audio_path = f"{work_dir}/audio.mp3"
-
-            voice_name_map = {
-                "en-us-male":   "en-US-GuyNeural",
-                "en-us-female": "en-US-JennyNeural",
-                "en-gb-male":   "en-GB-RyanNeural",
-                "en-gb-female": "en-GB-SoniaNeural",
-                "en-au-male":   "en-AU-WilliamNeural",
-                "en-au-female": "en-AU-NatashaNeural",
-                "en-in-male":   "en-IN-PrabhatNeural",
-                "en-in-female": "en-IN-NeerjaNeural",
-                "es-es-male":   "es-ES-AlvaroNeural",
-                "es-es-female": "es-ES-ElviraNeural",
-                "es-mx-male":   "es-MX-JorgeNeural",
-                "es-mx-female": "es-MX-DaliaNeural",
-                "fr-fr-male":   "fr-FR-HenriNeural",
-                "fr-fr-female": "fr-FR-DeniseNeural",
-                "de-de-male":   "de-DE-ConradNeural",
-                "de-de-female": "de-DE-KatjaNeural",
-                "ar-male":      "ar-SA-HamedNeural",
-                "ar-female":    "ar-SA-ZariyahNeural",
-                "hi-male":      "hi-IN-MadhurNeural",
-                "hi-female":    "hi-IN-SwaraNeural",
-                "zh-male":      "zh-CN-YunxiNeural",
-                "zh-female":    "zh-CN-XiaoxiaoNeural",
-                "ja-male":      "ja-JP-KeitaNeural",
-                "ja-female":    "ja-JP-NanamiNeural",
-                "pt-br-male":   "pt-BR-AntonioNeural",
-                "pt-br-female": "pt-BR-FranciscaNeural",
-                "it-male":      "it-IT-DiegoNeural",
-                "it-female":    "it-IT-ElsaNeural",
-            }
-            voice_name = voice_name_map.get(voice_id, "en-US-JennyNeural")
-
-            tts_result = subprocess.run(
-                ["edge-tts", "--voice", voice_name, "--text", script, "--write-media", audio_path],
-                capture_output=True,
-                text=True
-            )
-            if tts_result.returncode != 0:
-                raise Exception(f"edge-tts failed: {tts_result.stderr}")
-            print(f"✅ Audio generated with edge-tts: {audio_path}")
+        tts_result = subprocess.run(
+            ["edge-tts", "--voice", voice_name, "--text", script, "--write-media", audio_path],
+            capture_output=True,
+            text=True
+        )
+        if tts_result.returncode != 0:
+            raise Exception(f"edge-tts failed: {tts_result.stderr}")
+        print(f"✅ Audio generated: {audio_path}")
 
         # ── Step 3: Generate video with SadTalker ────────────────
         output_dir = f"{work_dir}/output"
