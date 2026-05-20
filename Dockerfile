@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir \
     edge-tts \
     TTS
 
+# Pre-download XTTS v2 model into the image (~2 GB)
+RUN python -c "from TTS.api import TTS; TTS('tts_models/multilingual/multi-dataset/xtts_v2')"
+
 # Install SadTalker
 RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
 WORKDIR /SadTalker
