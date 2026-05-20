@@ -9,12 +9,9 @@ RUN apt-get update -y && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install lightweight Python packages
-RUN pip install --no-cache-dir \
-    runpod \
-    boto3 \
-    edge-tts \
-    TTS
+RUN pip install --no-cache-dir runpod boto3 nest_asyncio
+RUN pip install --no-cache-dir edge-tts
+RUN pip install --no-cache-dir --timeout=300 TTS
 
 # Pre-download XTTS v2 model into the image (~2 GB)
 RUN python -c "from TTS.api import TTS; TTS('tts_models/multilingual/multi-dataset/xtts_v2')"
