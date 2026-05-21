@@ -1,12 +1,18 @@
+import sys
+import subprocess
+sys.setrecursionlimit(10000)
+
+# Fix numpy/cv2 before loading anything else
+subprocess.run(
+    [sys.executable, "-m", "pip", "install", "--force-reinstall", "--quiet", "numpy==1.24.3"],
+    check=False
+)
+
 try:
     import torchvision.transforms.functional_tensor
 except ModuleNotFoundError:
     import torchvision.transforms.functional as functional_tensor
-    import sys
     sys.modules['torchvision.transforms.functional_tensor'] = functional_tensor
-
-import sys
-sys.setrecursionlimit(10000)
 
 import torch
 print(f"PyTorch version: {torch.__version__}")

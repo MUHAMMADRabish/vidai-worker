@@ -24,8 +24,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Force-reinstall imageio after SadTalker deps to override any newer version
 RUN pip install --no-cache-dir --force-reinstall imageio==2.31.1 imageio-ffmpeg==0.4.9
-RUN pip install --no-cache-dir --force-reinstall numpy==1.26.4
-RUN pip install --no-cache-dir --force-reinstall opencv-python-headless==4.8.1.78
+RUN pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python 2>/dev/null || true
+RUN pip uninstall -y numpy 2>/dev/null || true
+RUN pip install --no-cache-dir numpy==1.24.3
+RUN pip install --no-cache-dir opencv-python-headless==4.7.0.72
 
 # Download SadTalker checkpoints
 RUN bash scripts/download_models.sh
