@@ -22,12 +22,18 @@ RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
 WORKDIR /SadTalker
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Force-reinstall imageio after SadTalker deps to override any newer version
+# Patch SadTalker to use modern numpy aliases (np.float/int/complex/bool removed in 1.24+)
+RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.float\b/np.float64/g' {} \;
+RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.int\b/np.int64/g' {} \;
+RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.complex\b/np.complex128/g' {} \;
+RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.bool\b/np.bool_/g' {} \;
+
+# Pin compatible versions after all deps are installed
 RUN pip install --no-cache-dir --force-reinstall imageio==2.31.1 imageio-ffmpeg==0.4.9
 RUN pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python 2>/dev/null || true
 RUN pip uninstall -y numpy 2>/dev/null || true
-RUN pip install --no-cache-dir numpy==1.24.3
-RUN pip install --no-cache-dir opencv-python-headless==4.7.0.72
+RUN pip install --no-cache-dir numpy==1.26.4
+RUN pip install --no-cache-dir opencv-python-headless==4.8.1.78
 
 # Download SadTalker checkpoints
 RUN bash scripts/download_models.sh

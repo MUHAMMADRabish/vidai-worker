@@ -4,7 +4,7 @@ sys.setrecursionlimit(10000)
 
 # Fix numpy/cv2 before loading anything else
 subprocess.run(
-    [sys.executable, "-m", "pip", "install", "--force-reinstall", "--quiet", "numpy==1.24.3"],
+    [sys.executable, "-m", "pip", "install", "--force-reinstall", "--quiet", "numpy==1.26.4"],
     check=False
 )
 
