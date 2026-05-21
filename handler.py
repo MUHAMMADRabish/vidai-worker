@@ -140,8 +140,20 @@ def handler(job):
         audio_path = f"{work_dir}/audio.mp3"
 
         if audio_url:
-            print(f"⬇️  Downloading pre-generated audio from: {audio_url}")
-            urllib.request.urlretrieve(audio_url, audio_path)
+            print(f"⬇️  Downloading ElevenLabs audio from: {audio_url}")
+            try:
+                req = urllib.request.Request(
+                    audio_url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (compatible; VidAI/1.0)",
+                        "Accept": "*/*",
+                    }
+                )
+                with urllib.request.urlopen(req) as response:
+                    with open(audio_path, "wb") as f:
+                        f.write(response.read())
+            except Exception as dl_err:
+                raise Exception(f"Failed to download audio_url ({audio_url}): {dl_err}")
             audio_size = os.path.getsize(audio_path)
             print(f"✅ Audio downloaded: {audio_path}  size: {audio_size} bytes")
             if audio_size == 0:
