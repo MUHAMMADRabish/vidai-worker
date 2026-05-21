@@ -2,47 +2,54 @@ FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
 ENV TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6 8.9 9.0 12.0"
 
-# Install system dependencies
+# Install system dependencies (libsndfile1 required by soundfile/librosa)
 RUN apt-get update -y && apt-get install -y \
     ffmpeg \
     libsm6 \
     libxext6 \
     libgl1-mesa-glx \
+    libsndfile1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install core runpod packages
 RUN pip install --no-cache-dir runpod boto3 nest_asyncio edge-tts Pillow
 
-# Fix basicsr/torchvision compatibility with PyTorch 2.4+
-RUN pip install --no-cache-dir "basicsr @ git+https://github.com/XPixelGroup/BasicSR.git"
-RUN pip install --no-cache-dir facexlib gfpgan
+# Clone MuseTalk
+RUN git clone https://github.com/TMElyralab/MuseTalk.git /MuseTalk
+WORKDIR /MuseTalk
 
-# Install SadTalker
-RUN git clone https://github.com/OpenTalker/SadTalker.git /SadTalker
-WORKDIR /SadTalker
-RUN pip install --no-cache-dir -r requirements.txt
+# Install MuseTalk dependencies
+# Skip torch/torchvision/torchaudio — base image already provides PyTorch 2.4.0 + CUDA 12.4
+# Skip tensorflow — not required for inference, and conflicts with CUDA 12.4
+RUN pip install --no-cache-dir \
+    diffusers==0.30.2 \
+    accelerate==0.28.0 \
+    soundfile==0.12.1 \
+    transformers==4.39.2 \
+    "huggingface_hub==0.30.2" \
+    librosa==0.11.0 \
+    einops==0.8.1 \
+    gdown \
+    omegaconf \
+    ffmpeg-python \
+    moviepy \
+    "imageio[ffmpeg]"
 
-# Patch SadTalker to use modern numpy aliases (np.float/int/complex/bool removed in 1.24+)
-RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.float\b/np.float64/g' {} \;
-RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.int\b/np.int64/g' {} \;
-RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.complex\b/np.complex128/g' {} \;
-RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.bool\b/np.bool_/g' {} \;
+# Install OpenMIM then MMlab ecosystem
+# Use cu121 prebuilt wheels — compatible with CUDA 12.4 via CUDA backward compatibility
+RUN pip install --no-cache-dir openmim
+RUN mim install mmengine
+RUN pip install --no-cache-dir mmcv==2.1.0 \
+    -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
+RUN mim install "mmdet==3.1.0" "mmpose==1.1.0"
 
-# Fix inhomogeneous array shape error in preprocess.py (numpy 1.26 stricter about mixed types)
-RUN sed -i 's/trans_params = np\.array(\[w0, h0, s, t\[0\], t\[1\]\])/trans_params = np.array([w0, h0, s, float(t[0]), float(t[1])])/g' /SadTalker/src/face3d/util/preprocess.py
-RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.array(\[w0, h0, s, t\[0\], t\[1\]\])/np.array([w0, h0, s, float(t[0]), float(t[1])])/g' {} \;
+# Download MuseTalk pretrained models (unet, whisper, sd-vae, dwpose, face-parse)
+RUN bash download_weights.sh
 
-# Pin compatible versions after all deps are installed
-RUN pip install --no-cache-dir --force-reinstall imageio==2.31.1 imageio-ffmpeg==0.4.9
-RUN pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python 2>/dev/null || true
-RUN pip uninstall -y numpy 2>/dev/null || true
-RUN pip install --no-cache-dir numpy==1.26.4
-RUN pip install --no-cache-dir opencv-python-headless==4.8.1.78
+# Pin numpy to MuseTalk's required version (must come after all other installs)
+RUN pip install --no-cache-dir --force-reinstall numpy==1.23.5
 
-# Download SadTalker checkpoints
-RUN bash scripts/download_models.sh
-
-# Copy handler
 COPY handler.py /handler.py
 
 WORKDIR /

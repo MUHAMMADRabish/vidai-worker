@@ -2,9 +2,9 @@ import sys
 import subprocess
 sys.setrecursionlimit(10000)
 
-# Fix numpy/cv2 before loading anything else
+# Ensure correct numpy version at runtime (MuseTalk requires 1.23.5)
 subprocess.run(
-    [sys.executable, "-m", "pip", "install", "--force-reinstall", "--quiet", "numpy==1.26.4"],
+    [sys.executable, "-m", "pip", "install", "--force-reinstall", "--quiet", "numpy==1.23.5"],
     check=False
 )
 
@@ -203,46 +203,51 @@ def handler(job):
                 raise Exception(f"edge-tts failed: {tts_result.stderr}")
             print(f"✅ Audio generated via edge-tts: {audio_path}  size: {os.path.getsize(audio_path)} bytes")
 
-        # ── Step 3: Generate video with SadTalker ────────────────
+        # ── Step 3: Generate video with MuseTalk ─────────────────
         output_dir = f"{work_dir}/output"
         os.makedirs(output_dir, exist_ok=True)
 
-        sadtalker_cmd = [
-            "python", "/SadTalker/inference.py",
-            "--driven_audio", audio_path,
-            "--source_image", photo_path,
+        # MuseTalk is config-driven: write a YAML that names the inputs
+        config_path = f"{work_dir}/inference.yaml"
+        with open(config_path, "w") as f:
+            f.write(f"task_0:\n  video_path: \"{photo_path}\"\n  audio_path: \"{audio_path}\"\n")
+        print(f"✅ MuseTalk config written: {config_path}")
+
+        musetalk_cmd = [
+            "python", "-m", "scripts.inference",
+            "--inference_config", config_path,
             "--result_dir", output_dir,
-            "--still",
-            "--preprocess", "extfull",
-            "--size", "512",
+            "--unet_model_path", "/MuseTalk/models/musetalkV15/unet.pth",
+            "--unet_config", "/MuseTalk/models/musetalkV15/musetalk.json",
+            "--version", "v15",
         ]
 
         result = subprocess.run(
-            sadtalker_cmd,
-            cwd="/SadTalker",
+            musetalk_cmd,
+            cwd="/MuseTalk",
             capture_output=True,
             text=True
         )
 
-        print(f"SadTalker stdout: {result.stdout[-1000:]}")
-        print(f"SadTalker stderr: {result.stderr[-1000:]}")
+        print(f"MuseTalk stdout: {result.stdout[-1000:]}")
+        print(f"MuseTalk stderr: {result.stderr[-1000:]}")
 
         if result.returncode != 0:
-            raise Exception(f"SadTalker failed: {result.stderr[-500:]}")
+            raise Exception(f"MuseTalk failed: {result.stderr[-500:]}")
 
-        print(f"✅ SadTalker process completed")
+        print(f"✅ MuseTalk process completed")
 
-        # ── List all files produced by SadTalker ─────────────────
+        # ── List all files produced by MuseTalk ───────────────────
         print(f"📂 Contents of output_dir ({output_dir}):")
         list_dir_recursive(output_dir)
 
         # ── Step 4: Find output video ────────────────────────────
-        # Search recursively — SadTalker sometimes writes into a dated sub-dir
+        # MuseTalk outputs task_0_res.mp4; rglob catches it wherever it lands
         video_files = list(Path(output_dir).rglob("*.mp4"))
         print(f"🔍 MP4 files found (recursive): {[str(v) for v in video_files]}")
         if not video_files:
             raise Exception(f"No .mp4 file found anywhere under {output_dir}")
-        # Prefer the largest file to avoid picking a tiny intermediate clip
+        # Pick the largest to avoid intermediate/preview clips
         video_path = str(max(video_files, key=lambda p: p.stat().st_size))
         video_size = os.path.getsize(video_path)
         print(f"✅ Video selected: {video_path}  size: {video_size} bytes")
