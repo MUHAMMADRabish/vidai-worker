@@ -1,4 +1,6 @@
-FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+FROM runpod/pytorch:2.6.0-py3.11-cuda12.6.3-devel-ubuntu22.04
+
+ENV TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6 8.9 9.0 12.0"
 
 # Install system dependencies
 RUN apt-get update -y && apt-get install -y \
