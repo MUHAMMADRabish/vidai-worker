@@ -28,6 +28,10 @@ RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.int\b/np.int64/g' {} \;
 RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.complex\b/np.complex128/g' {} \;
 RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.bool\b/np.bool_/g' {} \;
 
+# Fix inhomogeneous array shape error in preprocess.py (numpy 1.26 stricter about mixed types)
+RUN sed -i 's/trans_params = np\.array(\[w0, h0, s, t\[0\], t\[1\]\])/trans_params = np.array([w0, h0, s, float(t[0]), float(t[1])])/g' /SadTalker/src/face3d/util/preprocess.py
+RUN find /SadTalker -name "*.py" -exec sed -i 's/np\.array(\[w0, h0, s, t\[0\], t\[1\]\])/np.array([w0, h0, s, float(t[0]), float(t[1])])/g' {} \;
+
 # Pin compatible versions after all deps are installed
 RUN pip install --no-cache-dir --force-reinstall imageio==2.31.1 imageio-ffmpeg==0.4.9
 RUN pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python 2>/dev/null || true
