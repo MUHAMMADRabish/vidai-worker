@@ -12,6 +12,7 @@ RUN apt-get update -y && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir runpod boto3 nest_asyncio edge-tts Pillow
+RUN pip install --no-cache-dir imageio==2.31.1 imageio-ffmpeg==0.4.9
 
 # Fix basicsr/torchvision compatibility with PyTorch 2.4+
 RUN pip install --no-cache-dir "basicsr @ git+https://github.com/XPixelGroup/BasicSR.git"

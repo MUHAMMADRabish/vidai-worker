@@ -5,6 +5,9 @@ except ModuleNotFoundError:
     import sys
     sys.modules['torchvision.transforms.functional_tensor'] = functional_tensor
 
+import sys
+sys.setrecursionlimit(10000)
+
 import torch
 print(f"PyTorch version: {torch.__version__}")
 print(f"CUDA available: {torch.cuda.is_available()}")
