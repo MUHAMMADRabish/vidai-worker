@@ -1,6 +1,7 @@
 import sys
 import subprocess
 sys.setrecursionlimit(10000)
+print("Starting imports...")
 
 # Ensure correct numpy version at runtime (MuseTalk requires 1.23.5)
 subprocess.run(
@@ -9,29 +10,113 @@ subprocess.run(
 )
 
 try:
-    import torchvision.transforms.functional_tensor
-except ModuleNotFoundError:
-    import torchvision.transforms.functional as functional_tensor
-    sys.modules['torchvision.transforms.functional_tensor'] = functional_tensor
+    import runpod
+    print("runpod OK")
+except Exception as e:
+    print(f"runpod FAILED: {e}")
 
-import torch
-print(f"PyTorch version: {torch.__version__}")
-print(f"CUDA available: {torch.cuda.is_available()}")
-if torch.cuda.is_available():
-    print(f"GPU: {torch.cuda.get_device_name(0)}")
-    print(f"CUDA capability: {torch.cuda.get_device_capability(0)}")
+try:
+    import boto3
+    print("boto3 OK")
+except Exception as e:
+    print(f"boto3 FAILED: {e}")
 
-import runpod
+try:
+    import edge_tts
+    print("edge_tts OK")
+except Exception as e:
+    print(f"edge_tts FAILED: {e}")
+
+try:
+    from PIL import Image
+    print("PIL OK")
+except Exception as e:
+    print(f"PIL FAILED: {e}")
+
+try:
+    import torch
+    print(f"torch OK — version: {torch.__version__}  CUDA: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"  GPU: {torch.cuda.get_device_name(0)}")
+        print(f"  CUDA capability: {torch.cuda.get_device_capability(0)}")
+except Exception as e:
+    print(f"torch FAILED: {e}")
+
+try:
+    import diffusers
+    print(f"diffusers OK — {diffusers.__version__}")
+except Exception as e:
+    print(f"diffusers FAILED: {e}")
+
+try:
+    import transformers
+    print(f"transformers OK — {transformers.__version__}")
+except Exception as e:
+    print(f"transformers FAILED: {e}")
+
+try:
+    import mmcv
+    print(f"mmcv OK — {mmcv.__version__}")
+except Exception as e:
+    print(f"mmcv FAILED: {e}")
+
+try:
+    import cv2
+    print(f"cv2 OK — {cv2.__version__}")
+except Exception as e:
+    print(f"cv2 FAILED: {e}")
+
+try:
+    import numpy as np
+    print(f"numpy OK — {np.__version__}")
+except Exception as e:
+    print(f"numpy FAILED: {e}")
+
+try:
+    import librosa
+    print(f"librosa OK — {librosa.__version__}")
+except Exception as e:
+    print(f"librosa FAILED: {e}")
+
+try:
+    import soundfile
+    print("soundfile OK")
+except Exception as e:
+    print(f"soundfile FAILED: {e}")
+
+try:
+    import imageio
+    print(f"imageio OK — {imageio.__version__}")
+except Exception as e:
+    print(f"imageio FAILED: {e}")
+
+try:
+    import omegaconf
+    print("omegaconf OK")
+except Exception as e:
+    print(f"omegaconf FAILED: {e}")
+
+try:
+    import einops
+    print("einops OK")
+except Exception as e:
+    print(f"einops FAILED: {e}")
+
+try:
+    import accelerate
+    print(f"accelerate OK — {accelerate.__version__}")
+except Exception as e:
+    print(f"accelerate FAILED: {e}")
+
+print("All imports done, starting handler...")
+
 import base64
 import os
 import uuid
-import subprocess
 import time
 import urllib.request
 from pathlib import Path
-import boto3
 from botocore.config import Config
-from PIL import Image
 import io
 
 # ── Cloudflare R2 setup ──────────────────────────────────────────
@@ -49,7 +134,6 @@ s3 = boto3.client(
 BUCKET = os.environ["R2_BUCKET_NAME"]
 
 def list_dir_recursive(path: str):
-    """Print all files in a directory and its subdirectories."""
     for root, dirs, files in os.walk(path):
         level = root.replace(path, "").count(os.sep)
         indent = "  " * level
@@ -98,7 +182,7 @@ def handler(job):
     photo_b64        = job_input.get("photo_base64", "")
     voice_id         = job_input.get("voice_id", "en-us-female")
     voice_sample_url = job_input.get("voice_sample_url", "")
-    audio_url        = job_input.get("audio_url", "")   # pre-generated audio (e.g. ElevenLabs)
+    audio_url        = job_input.get("audio_url", "")
     job_id           = job_input.get("job_id", str(uuid.uuid4()))
 
     print(f"🔧 Job {job_id} — audio_url={'[SET]' if audio_url else '[NONE]'}  voice_id={voice_id}")
@@ -110,24 +194,18 @@ def handler(job):
         # ── Step 1: Save photo ───────────────────────────────────
         photo_path = f"{work_dir}/photo.png"
 
-        # Strip data URL prefix if present
         if "," in photo_b64:
             photo_b64 = photo_b64.split(",")[1]
 
-        # Fix base64 padding
         photo_b64 = photo_b64.strip()
         padding = 4 - len(photo_b64) % 4
         if padding != 4:
             photo_b64 += "=" * padding
 
         photo_data = base64.b64decode(photo_b64)
-
-        # Save using PIL
         img = Image.open(io.BytesIO(photo_data))
         img = img.convert("RGB")
 
-        # Keep larger size for body visibility
-        # Only resize if extremely large
         if img.width > 1024 or img.height > 1024:
             img.thumbnail((1024, 1024), Image.LANCZOS)
 
@@ -135,8 +213,6 @@ def handler(job):
         print(f"✅ Photo saved: {photo_path} size: {img.size}")
 
         # ── Step 2: Obtain audio ─────────────────────────────────
-        # Use pre-generated audio (e.g. from ElevenLabs) when audio_url is
-        # provided, otherwise fall back to edge-tts synthesis.
         audio_path = f"{work_dir}/audio.mp3"
 
         if audio_url:
@@ -160,7 +236,7 @@ def handler(job):
                 raise Exception(f"Downloaded audio file is empty: {audio_url}")
         else:
             if voice_sample_url:
-                print(f"ℹ️ voice_sample_url provided but voice cloning not yet implemented — using edge-tts voice match")
+                print(f"ℹ️ voice_sample_url provided but cloning not yet implemented — using edge-tts")
 
             voice_name_map = {
                 "en-us-male":   "en-US-GuyNeural",
@@ -207,7 +283,6 @@ def handler(job):
         output_dir = f"{work_dir}/output"
         os.makedirs(output_dir, exist_ok=True)
 
-        # MuseTalk is config-driven: write a YAML that names the inputs
         config_path = f"{work_dir}/inference.yaml"
         with open(config_path, "w") as f:
             f.write(f"task_0:\n  video_path: \"{photo_path}\"\n  audio_path: \"{audio_path}\"\n")
@@ -237,17 +312,14 @@ def handler(job):
 
         print(f"✅ MuseTalk process completed")
 
-        # ── List all files produced by MuseTalk ───────────────────
         print(f"📂 Contents of output_dir ({output_dir}):")
         list_dir_recursive(output_dir)
 
         # ── Step 4: Find output video ────────────────────────────
-        # MuseTalk outputs task_0_res.mp4; rglob catches it wherever it lands
         video_files = list(Path(output_dir).rglob("*.mp4"))
         print(f"🔍 MP4 files found (recursive): {[str(v) for v in video_files]}")
         if not video_files:
             raise Exception(f"No .mp4 file found anywhere under {output_dir}")
-        # Pick the largest to avoid intermediate/preview clips
         video_path = str(max(video_files, key=lambda p: p.stat().st_size))
         video_size = os.path.getsize(video_path)
         print(f"✅ Video selected: {video_path}  size: {video_size} bytes")
