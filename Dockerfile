@@ -57,6 +57,14 @@ RUN pip install --no-cache-dir --force-reinstall \
 RUN python -c "import transformers; print('transformers version:', transformers.__version__)" || true
 RUN python -c "import huggingface_hub; print('huggingface_hub version:', huggingface_hub.__version__)" || true
 
+# Reinstall torch stack with guaranteed-compatible versions for MuseTalk
+# torchvision::nms op requires torch and torchvision built together against the same CUDA
+RUN pip install --no-cache-dir --force-reinstall \
+    torch==2.1.0 \
+    torchvision==0.16.0 \
+    torchaudio==2.1.0 \
+    --index-url https://download.pytorch.org/whl/cu118
+
 # Pin numpy to MuseTalk's required version (must come after all other installs)
 RUN pip install --no-cache-dir --force-reinstall numpy==1.23.5
 
