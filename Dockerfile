@@ -44,4 +44,4 @@ RUN conda run -n musetalk pip install runpod boto3 edge-tts Pillow nest_asyncio
 COPY handler.py /handler.py
 
 WORKDIR /
-CMD ["conda", "run", "--no-capture-output", "-n", "musetalk", "python", "-u", "/handler.py"]
+CMD ["/opt/conda/envs/musetalk/bin/python", "-u", "/handler.py"]
