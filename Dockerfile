@@ -46,14 +46,12 @@ RUN mim install "mmdet==3.1.0" "mmpose==1.1.0"
 # Download MuseTalk pretrained models (unet, whisper, sd-vae, dwpose, face-parse)
 RUN bash download_weights.sh
 
-# Upgrade transformers to a version that natively supports huggingface-hub 1.x
-RUN pip install --no-cache-dir --force-reinstall "transformers>=4.40.0"
-
-# Patch versions.py in all known Python package locations
-RUN for dir in /usr/local/lib /usr/lib /opt /root; do \
-      find "$dir" -path "*/transformers/utils/versions.py" 2>/dev/null \
-        -exec sed -i 's/huggingface-hub>=0.19.3,<1.0/huggingface-hub>=0.19.3/g' {} \; ; \
-    done || true
+# Pin exact versions: transformers 4.35.2 has full WhisperModel support and
+# huggingface-hub 0.20.3 satisfies the <1.0 upper bound without patching
+RUN pip install --no-cache-dir --force-reinstall \
+    "transformers==4.35.2" \
+    "huggingface-hub==0.20.3" \
+    "accelerate==0.25.0"
 
 # Verify both packages are importable and print their versions
 RUN python -c "import transformers; print('transformers version:', transformers.__version__)" || true
