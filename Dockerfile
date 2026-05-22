@@ -46,11 +46,12 @@ RUN mim install "mmdet==3.1.0" "mmpose==1.1.0"
 # Download MuseTalk pretrained models (unet, whisper, sd-vae, dwpose, face-parse)
 RUN bash download_weights.sh
 
-# Pin exact versions: transformers 4.35.2 has full WhisperModel support and
-# huggingface-hub 0.20.3 satisfies the <1.0 upper bound without patching
+# Pin HuggingFace stack: 0.23.0 has split_torch_state_dict_into_shards
+# (required by diffusers) and still satisfies transformers' <1.0 upper bound
 RUN pip install --no-cache-dir --force-reinstall \
+    "huggingface-hub==0.23.0" \
+    "diffusers==0.24.0" \
     "transformers==4.35.2" \
-    "huggingface-hub==0.20.3" \
     "accelerate==0.25.0"
 
 # Verify both packages are importable and print their versions
