@@ -19,6 +19,9 @@ RUN pip install --no-cache-dir runpod boto3 nest_asyncio edge-tts Pillow
 RUN git clone https://github.com/TMElyralab/MuseTalk.git /MuseTalk
 WORKDIR /MuseTalk
 
+# Pre-pin HuggingFace packages before MuseTalk requirements can override them
+RUN pip install --no-cache-dir "huggingface-hub==0.23.0" "transformers==4.40.0"
+
 # Install MuseTalk dependencies
 # Skip torch/torchvision/torchaudio — base image already provides PyTorch 2.4.0 + CUDA 12.4
 # Skip tensorflow — not required for inference, and conflicts with CUDA 12.4
@@ -47,11 +50,10 @@ RUN mim install "mmdet==3.1.0" "mmpose==1.1.0"
 # Download MuseTalk pretrained models (unet, whisper, sd-vae, dwpose, face-parse)
 RUN bash download_weights.sh
 
-# Pin HuggingFace stack to ranges compatible with MuseTalk and mmlab deps
-# Must come after all other installs so these win over transitive upgrades
-RUN pip install --no-cache-dir --force-reinstall "huggingface-hub>=0.19.3,<1.0"
-RUN pip install --no-cache-dir --force-reinstall "transformers>=4.30.0,<4.40.0"
-RUN pip install --no-cache-dir --force-reinstall "accelerate>=0.20.0,<0.30.0"
+# Force exact HuggingFace versions last so they win over everything
+RUN pip install --no-cache-dir --force-reinstall "huggingface-hub==0.23.0"
+RUN pip install --no-cache-dir --force-reinstall "transformers==4.40.0"
+RUN pip install --no-cache-dir --force-reinstall "accelerate==0.29.0"
 
 # Pin numpy to MuseTalk's required version (must come after all other installs)
 RUN pip install --no-cache-dir --force-reinstall numpy==1.23.5
