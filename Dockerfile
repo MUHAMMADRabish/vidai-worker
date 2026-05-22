@@ -46,10 +46,17 @@ RUN mim install "mmdet==3.1.0" "mmpose==1.1.0"
 # Download MuseTalk pretrained models (unet, whisper, sd-vae, dwpose, face-parse)
 RUN bash download_weights.sh
 
-# Patch transformers to accept any huggingface-hub >= 0.19.3 (removes <1.0 upper bound)
-# so the base image's huggingface-hub 1.x doesn't trigger a version error at runtime
-RUN find /usr/local/lib/python3.11 -path "*/transformers/utils/versions.py" \
+# Upgrade transformers to a version that natively supports huggingface-hub 1.x
+RUN pip install --no-cache-dir --force-reinstall "transformers>=4.40.0"
+
+# Also patch versions.py at every possible location as a belt-and-suspenders fix
+RUN find / -path "*/transformers/utils/versions.py" 2>/dev/null \
     -exec sed -i 's/huggingface-hub>=0.19.3,<1.0/huggingface-hub>=0.19.3/g' {} \;
+
+# Verify: show where versions.py lives and confirm the patch applied
+RUN find / -name "versions.py" -path "*/transformers/*" 2>/dev/null
+RUN grep -r "huggingface-hub" /usr/local/lib/python3.11/dist-packages/transformers/utils/versions.py 2>/dev/null || echo "Not at dist-packages path"
+RUN find / -path "*/transformers/utils/versions.py" 2>/dev/null -exec grep "huggingface-hub" {} \;
 
 # Pin numpy to MuseTalk's required version (must come after all other installs)
 RUN pip install --no-cache-dir --force-reinstall numpy==1.23.5
