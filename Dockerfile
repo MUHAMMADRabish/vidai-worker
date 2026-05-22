@@ -49,14 +49,15 @@ RUN bash download_weights.sh
 # Upgrade transformers to a version that natively supports huggingface-hub 1.x
 RUN pip install --no-cache-dir --force-reinstall "transformers>=4.40.0"
 
-# Also patch versions.py at every possible location as a belt-and-suspenders fix
-RUN find / -path "*/transformers/utils/versions.py" 2>/dev/null \
-    -exec sed -i 's/huggingface-hub>=0.19.3,<1.0/huggingface-hub>=0.19.3/g' {} \;
+# Patch versions.py in all known Python package locations
+RUN for dir in /usr/local/lib /usr/lib /opt /root; do \
+      find "$dir" -path "*/transformers/utils/versions.py" 2>/dev/null \
+        -exec sed -i 's/huggingface-hub>=0.19.3,<1.0/huggingface-hub>=0.19.3/g' {} \; ; \
+    done || true
 
-# Verify: show where versions.py lives and confirm the patch applied
-RUN find / -name "versions.py" -path "*/transformers/*" 2>/dev/null
-RUN grep -r "huggingface-hub" /usr/local/lib/python3.11/dist-packages/transformers/utils/versions.py 2>/dev/null || echo "Not at dist-packages path"
-RUN find / -path "*/transformers/utils/versions.py" 2>/dev/null -exec grep "huggingface-hub" {} \;
+# Verify both packages are importable and print their versions
+RUN python -c "import transformers; print('transformers version:', transformers.__version__)" || true
+RUN python -c "import huggingface_hub; print('huggingface_hub version:', huggingface_hub.__version__)" || true
 
 # Pin numpy to MuseTalk's required version (must come after all other installs)
 RUN pip install --no-cache-dir --force-reinstall numpy==1.23.5
