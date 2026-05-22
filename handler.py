@@ -289,7 +289,7 @@ def handler(job):
         print(f"✅ MuseTalk config written: {config_path}")
 
         musetalk_cmd = [
-            "/opt/conda/envs/musetalk/bin/python", "-m", "scripts.inference",
+            "python", "-m", "scripts.inference",
             "--inference_config", config_path,
             "--result_dir", output_dir,
             "--unet_model_path", "/MuseTalk/models/musetalkV15/unet.pth",
