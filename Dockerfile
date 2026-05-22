@@ -19,9 +19,6 @@ RUN pip install --no-cache-dir runpod boto3 nest_asyncio edge-tts Pillow
 RUN git clone https://github.com/TMElyralab/MuseTalk.git /MuseTalk
 WORKDIR /MuseTalk
 
-# Pre-pin HuggingFace packages before MuseTalk requirements can override them
-RUN pip install --no-cache-dir "huggingface-hub==0.23.0" "transformers==4.40.0"
-
 # Install MuseTalk dependencies
 # Skip torch/torchvision/torchaudio — base image already provides PyTorch 2.4.0 + CUDA 12.4
 # Skip tensorflow — not required for inference, and conflicts with CUDA 12.4
@@ -30,7 +27,6 @@ RUN pip install --no-cache-dir \
     accelerate==0.28.0 \
     soundfile==0.12.1 \
     transformers==4.39.2 \
-    "huggingface_hub==0.30.2" \
     librosa==0.11.0 \
     einops==0.8.1 \
     gdown \
@@ -50,10 +46,10 @@ RUN mim install "mmdet==3.1.0" "mmpose==1.1.0"
 # Download MuseTalk pretrained models (unet, whisper, sd-vae, dwpose, face-parse)
 RUN bash download_weights.sh
 
-# Force exact HuggingFace versions last so they win over everything
-RUN pip install --no-cache-dir --force-reinstall "huggingface-hub==0.23.0"
-RUN pip install --no-cache-dir --force-reinstall "transformers==4.40.0"
-RUN pip install --no-cache-dir --force-reinstall "accelerate==0.29.0"
+# Patch transformers to accept any huggingface-hub >= 0.19.3 (removes <1.0 upper bound)
+# so the base image's huggingface-hub 1.x doesn't trigger a version error at runtime
+RUN find /usr/local/lib/python3.11 -path "*/transformers/utils/versions.py" \
+    -exec sed -i 's/huggingface-hub>=0.19.3,<1.0/huggingface-hub>=0.19.3/g' {} \;
 
 # Pin numpy to MuseTalk's required version (must come after all other installs)
 RUN pip install --no-cache-dir --force-reinstall numpy==1.23.5
