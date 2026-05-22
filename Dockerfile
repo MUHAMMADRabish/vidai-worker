@@ -1,75 +1,44 @@
 FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
-ENV TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6 8.9 9.0 12.0"
+# Install system dependencies
+RUN apt-get update && apt-get install -y ffmpeg libsndfile1 wget git && rm -rf /var/lib/apt/lists/*
 
-# Install system dependencies (libsndfile1 required by soundfile/librosa)
-RUN apt-get update -y && apt-get install -y \
-    ffmpeg \
-    libsm6 \
-    libxext6 \
-    libgl1-mesa-glx \
-    libsndfile1 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /miniconda.sh && \
+    bash /miniconda.sh -b -p /opt/conda && \
+    rm /miniconda.sh
+ENV PATH="/opt/conda/bin:$PATH"
 
-# Install core runpod packages
-RUN pip install --no-cache-dir runpod boto3 nest_asyncio edge-tts Pillow
+# Create conda env with Python 3.10 exactly as MuseTalk README specifies
+RUN conda create -n musetalk python=3.10 -y
+
+# Install torch in conda env (cu118 wheels matched to MuseTalk requirements)
+RUN conda run -n musetalk pip install \
+    torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 \
+    --index-url https://download.pytorch.org/whl/cu118
 
 # Clone MuseTalk
 RUN git clone https://github.com/TMElyralab/MuseTalk.git /MuseTalk
 WORKDIR /MuseTalk
 
-# Install MuseTalk dependencies
-# Skip torch/torchvision/torchaudio — base image already provides PyTorch 2.4.0 + CUDA 12.4
-# Skip tensorflow — not required for inference, and conflicts with CUDA 12.4
-RUN pip install --no-cache-dir \
-    diffusers==0.30.2 \
-    accelerate==0.28.0 \
-    soundfile==0.12.1 \
-    transformers==4.39.2 \
-    librosa==0.11.0 \
-    einops==0.8.1 \
-    gdown \
-    omegaconf \
-    ffmpeg-python \
-    moviepy \
-    "imageio[ffmpeg]"
+# Install MuseTalk requirements in conda env
+RUN conda run -n musetalk pip install -r requirements.txt
 
-# Install OpenMIM then MMlab ecosystem
-# Use cu121 prebuilt wheels — compatible with CUDA 12.4 via CUDA backward compatibility
-RUN pip install --no-cache-dir openmim
-RUN mim install mmengine
-RUN pip install --no-cache-dir mmcv==2.1.0 \
-    -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.4/index.html
-RUN mim install "mmdet==3.1.0" "mmpose==1.1.0"
+# Install mmlab packages in conda env
+RUN conda run -n musetalk pip install openmim && \
+    conda run -n musetalk mim install mmengine && \
+    conda run -n musetalk mim install "mmcv>=2.0.1" && \
+    conda run -n musetalk mim install "mmdet>=3.1.0" && \
+    conda run -n musetalk mim install "mmpose>=1.1.0"
 
-# Download MuseTalk pretrained models (unet, whisper, sd-vae, dwpose, face-parse)
-RUN bash download_weights.sh
+# Download MuseTalk pretrained models from HuggingFace
+RUN conda run -n musetalk pip install huggingface_hub && \
+    conda run -n musetalk huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models
 
-# Pin HuggingFace stack: 0.23.0 has split_torch_state_dict_into_shards
-# (required by diffusers) and still satisfies transformers' <1.0 upper bound
-RUN pip install --no-cache-dir --force-reinstall \
-    "huggingface-hub==0.23.0" \
-    "diffusers==0.24.0" \
-    "transformers==4.35.2" \
-    "accelerate==0.25.0"
-
-# Verify both packages are importable and print their versions
-RUN python -c "import transformers; print('transformers version:', transformers.__version__)" || true
-RUN python -c "import huggingface_hub; print('huggingface_hub version:', huggingface_hub.__version__)" || true
-
-# Reinstall torch stack with guaranteed-compatible versions for MuseTalk
-# torchvision::nms op requires torch and torchvision built together against the same CUDA
-RUN pip install --no-cache-dir --force-reinstall \
-    torch==2.1.0 \
-    torchvision==0.16.0 \
-    torchaudio==2.1.0 \
-    --index-url https://download.pytorch.org/whl/cu118
-
-# Pin numpy to MuseTalk's required version (must come after all other installs)
-RUN pip install --no-cache-dir --force-reinstall numpy==1.23.5
+# Install runpod and handler dependencies in conda env
+RUN conda run -n musetalk pip install runpod boto3 edge-tts Pillow nest_asyncio
 
 COPY handler.py /handler.py
 
 WORKDIR /
-CMD ["python", "-u", "handler.py"]
+CMD ["conda", "run", "--no-capture-output", "-n", "musetalk", "python", "-u", "/handler.py"]
