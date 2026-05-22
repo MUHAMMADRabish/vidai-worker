@@ -9,11 +9,15 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
     rm /miniconda.sh
 ENV PATH="/opt/conda/bin:$PATH"
 
+# Initialize conda and switch to login shell so conda is available
+RUN /opt/conda/bin/conda init bash
+SHELL ["/bin/bash", "--login", "-c"]
+
 # Create conda env with Python 3.10 exactly as MuseTalk README specifies
-RUN conda create -n musetalk python=3.10 -y
+RUN /opt/conda/bin/conda create -n musetalk python=3.10 -y
 
 # Install torch in conda env (cu118 wheels matched to MuseTalk requirements)
-RUN conda run -n musetalk pip install \
+RUN /opt/conda/bin/conda run -n musetalk pip install \
     torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 \
     --index-url https://download.pytorch.org/whl/cu118
 
@@ -22,23 +26,23 @@ RUN git clone https://github.com/TMElyralab/MuseTalk.git /MuseTalk
 WORKDIR /MuseTalk
 
 # Install MuseTalk requirements in conda env
-RUN conda run -n musetalk pip install -r requirements.txt
+RUN /opt/conda/bin/conda run -n musetalk pip install -r requirements.txt
 
 # Install mmlab packages in conda env
-RUN conda run -n musetalk pip install openmim && \
-    conda run -n musetalk mim install mmengine && \
-    conda run -n musetalk mim install "mmcv>=2.0.1" && \
-    conda run -n musetalk mim install "mmdet>=3.1.0" && \
-    conda run -n musetalk mim install "mmpose>=1.1.0"
+RUN /opt/conda/bin/conda run -n musetalk pip install openmim && \
+    /opt/conda/bin/conda run -n musetalk mim install mmengine && \
+    /opt/conda/bin/conda run -n musetalk mim install "mmcv>=2.0.1" && \
+    /opt/conda/bin/conda run -n musetalk mim install "mmdet>=3.1.0" && \
+    /opt/conda/bin/conda run -n musetalk mim install "mmpose>=1.1.0"
 
 # Download MuseTalk pretrained models from HuggingFace
-RUN conda run -n musetalk pip install huggingface_hub && \
-    conda run -n musetalk huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models
+RUN /opt/conda/bin/conda run -n musetalk pip install huggingface_hub && \
+    /opt/conda/bin/conda run -n musetalk huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models
 
 # Install runpod and handler dependencies in conda env
-RUN conda run -n musetalk pip install runpod boto3 edge-tts Pillow nest_asyncio
+RUN /opt/conda/bin/conda run -n musetalk pip install runpod boto3 edge-tts Pillow nest_asyncio
 
 COPY handler.py /handler.py
 
 WORKDIR /
-CMD ["conda", "run", "--no-capture-output", "-n", "musetalk", "python", "-u", "/handler.py"]
+CMD ["/opt/conda/bin/conda", "run", "--no-capture-output", "-n", "musetalk", "python", "-u", "/handler.py"]
