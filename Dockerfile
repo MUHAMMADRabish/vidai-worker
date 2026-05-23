@@ -29,10 +29,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Download MuseTalk unet + face-parse models
 RUN huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models/musetalk
 
-# Download sd-vae model
+# Download sd-vae model (filter to model files only, skip large git metadata)
 RUN mkdir -p /MuseTalk/models/sd-vae && \
     huggingface-cli download stabilityai/sd-vae-ft-mse \
-    --local-dir /MuseTalk/models/sd-vae
+    --local-dir /MuseTalk/models/sd-vae \
+    --include "*.json" "*.bin" "*.safetensors"
 
 # Download whisper model
 RUN mkdir -p /MuseTalk/models/whisper && \
@@ -52,6 +53,14 @@ RUN mkdir -p /MuseTalk/models/dwpose && \
     "https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384.pth" && \
     wget -q -O /MuseTalk/models/dwpose/yolox_l.onnx \
     "https://huggingface.co/yzd-v/DWPose/resolve/main/yolox_l.onnx"
+
+# Verify all model directories are present
+RUN ls -la /MuseTalk/models/
+
+# Show inference config so model paths are visible in build log
+RUN cat /MuseTalk/configs/inference/default.yaml 2>/dev/null || \
+    cat /MuseTalk/configs/inference/*.yaml 2>/dev/null || \
+    echo "No inference yaml found at configs/inference/"
 
 COPY handler.py /handler.py
 WORKDIR /
