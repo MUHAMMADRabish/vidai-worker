@@ -29,6 +29,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Download MuseTalk pretrained models
 RUN huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models
 
+# Download dwpose models (not included in TMElyralab/MuseTalk HF repo)
+RUN mkdir -p /MuseTalk/models/dwpose && \
+    wget -q -O /MuseTalk/models/dwpose/dw-ll_ucoco_384.pth \
+    "https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384.pth"
+
+RUN wget -q -O /MuseTalk/models/dwpose/yolox_l.onnx \
+    "https://huggingface.co/yzd-v/DWPose/resolve/main/yolox_l.onnx"
+
 COPY handler.py /handler.py
 WORKDIR /
 CMD ["python", "-u", "/handler.py"]
