@@ -41,13 +41,17 @@ RUN huggingface-cli download yzd-v/DWPose \
     --local-dir /MuseTalk/models/dwpose \
     --local-dir-use-symlinks False
 
+# Download whisper model
+RUN huggingface-cli download openai/whisper-tiny \
+    --local-dir /MuseTalk/models/whisper \
+    --local-dir-use-symlinks False
+
 # Verify all model directories are present
 RUN ls -la /MuseTalk/models/
 
-# Show inference config so model paths are visible in build log
+# Show inference config to confirm expected model paths
 RUN cat /MuseTalk/configs/inference/default.yaml 2>/dev/null || \
-    cat /MuseTalk/configs/inference/*.yaml 2>/dev/null || \
-    echo "No inference yaml found at configs/inference/"
+    find /MuseTalk -name "*.yaml" | head -5 | xargs cat
 
 COPY handler.py /handler.py
 WORKDIR /
