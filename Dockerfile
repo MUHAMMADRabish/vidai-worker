@@ -26,15 +26,31 @@ RUN git clone https://github.com/TMElyralab/MuseTalk.git /MuseTalk
 WORKDIR /MuseTalk
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download MuseTalk pretrained models
-RUN huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models
+# Download MuseTalk unet + face-parse models
+RUN huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models/musetalk
 
-# Download dwpose models (not included in TMElyralab/MuseTalk HF repo)
+# Download sd-vae model
+RUN mkdir -p /MuseTalk/models/sd-vae && \
+    huggingface-cli download stabilityai/sd-vae-ft-mse \
+    --local-dir /MuseTalk/models/sd-vae
+
+# Download whisper model
+RUN mkdir -p /MuseTalk/models/whisper && \
+    huggingface-cli download openai/whisper-tiny \
+    --local-dir /MuseTalk/models/whisper
+
+# Download face parsing weights
+RUN mkdir -p /MuseTalk/models/face-parse-bisent && \
+    wget -q -O /MuseTalk/models/face-parse-bisent/79999_iter.pth \
+    "https://huggingface.co/TMElyralab/MuseTalk/resolve/main/face-parse-bisent/79999_iter.pth" && \
+    wget -q -O /MuseTalk/models/face-parse-bisent/resnet18-5c106cde.pth \
+    "https://huggingface.co/TMElyralab/MuseTalk/resolve/main/face-parse-bisent/resnet18-5c106cde.pth"
+
+# Download dwpose models
 RUN mkdir -p /MuseTalk/models/dwpose && \
     wget -q -O /MuseTalk/models/dwpose/dw-ll_ucoco_384.pth \
-    "https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384.pth"
-
-RUN wget -q -O /MuseTalk/models/dwpose/yolox_l.onnx \
+    "https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384.pth" && \
+    wget -q -O /MuseTalk/models/dwpose/yolox_l.onnx \
     "https://huggingface.co/yzd-v/DWPose/resolve/main/yolox_l.onnx"
 
 COPY handler.py /handler.py
