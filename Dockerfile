@@ -26,33 +26,20 @@ RUN git clone https://github.com/TMElyralab/MuseTalk.git /MuseTalk
 WORKDIR /MuseTalk
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download MuseTalk unet + face-parse models
-RUN huggingface-cli download TMElyralab/MuseTalk --local-dir /MuseTalk/models/musetalk
+# Download all MuseTalk models (unet, face-parse-bisent, whisper, configs)
+RUN huggingface-cli download TMElyralab/MuseTalk \
+    --local-dir /MuseTalk/models \
+    --local-dir-use-symlinks False
 
-# Download sd-vae model (filter to model files only, skip large git metadata)
-RUN mkdir -p /MuseTalk/models/sd-vae && \
-    huggingface-cli download stabilityai/sd-vae-ft-mse \
+# Download sd-vae model
+RUN huggingface-cli download stabilityai/sd-vae-ft-mse \
     --local-dir /MuseTalk/models/sd-vae \
-    --include "*.json" "*.bin" "*.safetensors"
+    --local-dir-use-symlinks False
 
-# Download whisper model
-RUN mkdir -p /MuseTalk/models/whisper && \
-    huggingface-cli download openai/whisper-tiny \
-    --local-dir /MuseTalk/models/whisper
-
-# Download face parsing weights
-RUN mkdir -p /MuseTalk/models/face-parse-bisent && \
-    wget -q -O /MuseTalk/models/face-parse-bisent/79999_iter.pth \
-    "https://huggingface.co/TMElyralab/MuseTalk/resolve/main/face-parse-bisent/79999_iter.pth" && \
-    wget -q -O /MuseTalk/models/face-parse-bisent/resnet18-5c106cde.pth \
-    "https://huggingface.co/TMElyralab/MuseTalk/resolve/main/face-parse-bisent/resnet18-5c106cde.pth"
-
-# Download dwpose models
-RUN mkdir -p /MuseTalk/models/dwpose && \
-    wget -q -O /MuseTalk/models/dwpose/dw-ll_ucoco_384.pth \
-    "https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384.pth" && \
-    wget -q -O /MuseTalk/models/dwpose/yolox_l.onnx \
-    "https://huggingface.co/yzd-v/DWPose/resolve/main/yolox_l.onnx"
+# Download dwpose models (pose estimator + person detector)
+RUN huggingface-cli download yzd-v/DWPose \
+    --local-dir /MuseTalk/models/dwpose \
+    --local-dir-use-symlinks False
 
 # Verify all model directories are present
 RUN ls -la /MuseTalk/models/

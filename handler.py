@@ -292,8 +292,8 @@ def handler(job):
             "python", "-m", "scripts.inference",
             "--inference_config", config_path,
             "--result_dir", output_dir,
-            "--unet_model_path", "/MuseTalk/models/musetalk/musetalkV15/unet.pth",
-            "--unet_config", "/MuseTalk/models/musetalk/musetalkV15/musetalk.json",
+            "--unet_model_path", "/MuseTalk/models/musetalkV15/unet.pth",
+            "--unet_config", "/MuseTalk/models/musetalkV15/musetalk.json",
             "--version", "v15",
         ]
 
