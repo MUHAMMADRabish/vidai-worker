@@ -46,17 +46,23 @@ RUN huggingface-cli download openai/whisper-tiny \
     --local-dir /MuseTalk/models/whisper \
     --local-dir-use-symlinks False
 
-# Download resnet18 for face parsing (standard PyTorch model, fallback to pytorch.org)
-RUN mkdir -p /MuseTalk/models/face-parse-bisent && \
-    huggingface-cli download TMElyralab/MuseTalk \
-    face-parse-bisent/resnet18-5c106cde.pth \
-    --local-dir /MuseTalk/models \
-    --local-dir-use-symlinks False || \
-    wget -q -O /MuseTalk/models/face-parse-bisent/resnet18-5c106cde.pth \
+# Download face-parse-bisent models
+RUN mkdir -p /MuseTalk/models/face-parse-bisent
+
+# 79999_iter.pth — try Google Drive first, fall back to jonathandinu/face-parsing on HF
+RUN wget -q --tries=3 -O /MuseTalk/models/face-parse-bisent/79999_iter.pth \
+    "https://drive.google.com/uc?id=154JgKpzCPW82qINcVieuPH3fZ2e0P812" || \
+    huggingface-cli download jonathandinu/face-parsing \
+    79999_iter.pth \
+    --local-dir /MuseTalk/models/face-parse-bisent \
+    --local-dir-use-symlinks False
+
+# resnet18-5c106cde.pth — standard PyTorch pretrained backbone from pytorch.org
+RUN wget -q --tries=3 -O /MuseTalk/models/face-parse-bisent/resnet18-5c106cde.pth \
     "https://download.pytorch.org/models/resnet18-5c106cde.pth"
 
 # Verify face-parse-bisent contents
-RUN ls -la /MuseTalk/models/face-parse-bisent/ || echo "Directory empty or missing"
+RUN ls -la /MuseTalk/models/face-parse-bisent/
 
 # Verify all model directories are present
 RUN ls -la /MuseTalk/models/
