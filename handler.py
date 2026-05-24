@@ -279,38 +279,33 @@ def handler(job):
                 raise Exception(f"edge-tts failed: {tts_result.stderr}")
             print(f"✅ Audio generated via edge-tts: {audio_path}  size: {os.path.getsize(audio_path)} bytes")
 
-        # ── Step 3: Generate video with MuseTalk ─────────────────
+        # ── Step 3: Generate video with LatentSync ───────────────
         output_dir = f"{work_dir}/output"
         os.makedirs(output_dir, exist_ok=True)
 
-        config_path = f"{work_dir}/inference.yaml"
-        with open(config_path, "w") as f:
-            f.write(f"task_0:\n  video_path: \"{photo_path}\"\n  audio_path: \"{audio_path}\"\n")
-        print(f"✅ MuseTalk config written: {config_path}")
-
-        musetalk_cmd = [
+        latentsync_cmd = [
             "python", "-m", "scripts.inference",
-            "--inference_config", config_path,
+            "--unet_config_path", "/LatentSync/configs/unet/stage2.yaml",
+            "--inference_ckpt_path", "/LatentSync/checkpoints/latentsync_unet.pt",
+            "--audio_path", audio_path,
+            "--video_path", photo_path,
             "--result_dir", output_dir,
-            "--unet_model_path", "/MuseTalk/models/musetalkV15/unet.pth",
-            "--unet_config", "/MuseTalk/models/musetalkV15/musetalk.json",
-            "--version", "v15",
         ]
 
         result = subprocess.run(
-            musetalk_cmd,
-            cwd="/MuseTalk",
+            latentsync_cmd,
+            cwd="/LatentSync",
             capture_output=True,
             text=True
         )
 
-        print(f"MuseTalk stdout: {result.stdout[-1000:]}")
-        print(f"MuseTalk stderr: {result.stderr[-1000:]}")
+        print(f"LatentSync stdout: {result.stdout[-1000:]}")
+        print(f"LatentSync stderr: {result.stderr[-1000:]}")
 
         if result.returncode != 0:
-            raise Exception(f"MuseTalk failed: {result.stderr[-500:]}")
+            raise Exception(f"LatentSync failed: {result.stderr[-500:]}")
 
-        print(f"✅ MuseTalk process completed")
+        print(f"✅ LatentSync process completed")
 
         print(f"📂 Contents of output_dir ({output_dir}):")
         list_dir_recursive(output_dir)
