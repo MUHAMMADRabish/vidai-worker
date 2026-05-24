@@ -212,6 +212,15 @@ def handler(job):
         img.save(photo_path, "PNG")
         print(f"✅ Photo saved: {photo_path} size: {img.size}")
 
+        # LatentSync requires even dimensions for its codec pipeline
+        w, h = img.size
+        new_w = w if w % 2 == 0 else w - 1
+        new_h = h if h % 2 == 0 else h - 1
+        if new_w != w or new_h != h:
+            img = img.resize((new_w, new_h), Image.LANCZOS)
+            img.save(photo_path)
+            print(f"Resized photo from {w}x{h} to {new_w}x{new_h} (even dimensions)")
+
         # ── Step 2: Obtain audio ─────────────────────────────────
         audio_path = f"{work_dir}/audio.mp3"
 
