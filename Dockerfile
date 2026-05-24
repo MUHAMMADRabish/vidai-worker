@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir runpod boto3 edge-tts Pillow nest_asyncio
 RUN git clone https://github.com/bytedance/LatentSync.git /LatentSync
 WORKDIR /LatentSync
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -e .
 
 RUN huggingface-cli download chunyu-li/LatentSync \
     --local-dir /LatentSync/checkpoints \

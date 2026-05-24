@@ -293,9 +293,13 @@ def handler(job):
             "--video_out_path", video_out_path,
         ]
 
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "/LatentSync:" + env.get("PYTHONPATH", "")
+
         result = subprocess.run(
             latentsync_cmd,
             cwd="/LatentSync",
+            env=env,
             capture_output=True,
             text=True
         )
