@@ -282,14 +282,15 @@ def handler(job):
         # ── Step 3: Generate video with LatentSync ───────────────
         output_dir = f"{work_dir}/output"
         os.makedirs(output_dir, exist_ok=True)
+        video_out_path = f"{output_dir}/output.mp4"
 
         latentsync_cmd = [
-            "python", "-m", "scripts.inference",
+            "python", "inference.py",
             "--unet_config_path", "/LatentSync/configs/unet/stage2.yaml",
             "--inference_ckpt_path", "/LatentSync/checkpoints/latentsync_unet.pt",
-            "--audio_path", audio_path,
             "--video_path", photo_path,
-            "--result_dir", output_dir,
+            "--audio_path", audio_path,
+            "--video_out_path", video_out_path,
         ]
 
         result = subprocess.run(
@@ -311,11 +312,14 @@ def handler(job):
         list_dir_recursive(output_dir)
 
         # ── Step 4: Find output video ────────────────────────────
-        video_files = list(Path(output_dir).rglob("*.mp4"))
-        print(f"🔍 MP4 files found (recursive): {[str(v) for v in video_files]}")
-        if not video_files:
-            raise Exception(f"No .mp4 file found anywhere under {output_dir}")
-        video_path = str(max(video_files, key=lambda p: p.stat().st_size))
+        if os.path.exists(video_out_path):
+            video_path = video_out_path
+        else:
+            video_files = list(Path(output_dir).rglob("*.mp4"))
+            print(f"🔍 MP4 files found (recursive): {[str(v) for v in video_files]}")
+            if not video_files:
+                raise Exception(f"No .mp4 file found anywhere under {output_dir}")
+            video_path = str(max(video_files, key=lambda p: p.stat().st_size))
         video_size = os.path.getsize(video_path)
         print(f"✅ Video selected: {video_path}  size: {video_size} bytes")
 
