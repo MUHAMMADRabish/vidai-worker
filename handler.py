@@ -300,6 +300,9 @@ def handler(job):
             "--video_path", photo_path,
             "--audio_path", audio_path,
             "--video_out_path", video_out_path,
+            "--inference_steps", "20",
+            "--guidance_scale", "1.5",
+            "--seed", "42",
         ]
 
         env = os.environ.copy()
