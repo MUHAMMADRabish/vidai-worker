@@ -285,7 +285,7 @@ def handler(job):
         video_out_path = f"{output_dir}/output.mp4"
 
         latentsync_cmd = [
-            "python", "inference.py",
+            "python", "/LatentSync/scripts/inference.py",
             "--unet_config_path", "/LatentSync/configs/unet/stage2.yaml",
             "--inference_ckpt_path", "/LatentSync/checkpoints/latentsync_unet.pt",
             "--video_path", photo_path,
